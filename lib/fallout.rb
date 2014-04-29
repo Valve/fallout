@@ -1,5 +1,3 @@
-require "fallout/version"
-
-module Fallout
-  # Your code goes here...
-end
+require 'fallout/version'
+require 'fallout/backup'
+require 'fallout/restore'

@@ -1,5 +1,63 @@
 #!/usr/bin/env ruby
 
 require 'fallout'
+require 'trollop'
 
-puts 'fallout is cool'
+cmd = ARGV.shift
+help = <<-EOS
+
+Fallout - Amazon EC2 backup and restore utility, version: #{Fallout::VERSION}
+
+To backup:
+  fallout backup -v <volume_id> -k <keep_days>
+
+  options:
+    -v volume id to create snapshot for
+    -k number of days to keep the snapshots
+
+  example:
+    # backup volume and keep it for 3 days
+    fallout backup -v v23dbade3 -k 3
+
+To restore:
+  fallout restore -i <instance_id> -v <volume_id>
+
+  options:
+    -i instance id to restore
+    -v volume id to restore
+
+  example:
+  # restore volume
+  fallout restore -i i39dabd -v v23dbade3
+
+EOS
+
+opts = case cmd
+when 'backup'
+  Trollop::options do
+    opt :volume, 'Volume ID', type: :string
+    opt :keep, 'Number of days to keep snapshots for', type: :integer
+  end
+when  'restore'
+  Trollop::options do
+    opt :instance, 'Instance ID', type: :string
+    opt :volume, 'Volume ID', type: :string
+  end
+else
+  puts help
+end
+
+case cmd
+when 'backup'
+  if(opts[:volume].nil? || opts[:keep].nil?)
+    puts '-v and -k are required for backup' 
+  else
+    Fallout::Backup.new(opts).run
+  end
+when 'restore'
+  if(opts[:instance].nil? || opts[:volume].nil?)
+    puts '-i and -v are required for restore' 
+  else
+    Fallout::Restore.new(opts).run
+  end
+end
