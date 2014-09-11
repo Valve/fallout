@@ -24,18 +24,18 @@ Syntax:
 
 Example:
 
-`
+```
 $ fallout backup -v vol-23ab3d -k 7
 
  Deleted snapshots snap-6695b3a5, snap-ca6a3069
  Created new snapshot snap-b67f7725, expires after 2014-09-14
-`
+```
 
 _This will create a snapshot for the specified volume and will mark it
 as valid for 7 days. It will also delete all expired snapshots, created for the
 specified volume._
 
-*_How does expiration work?_*
+#### How does expiration work?
 
 When creating a snapshot, `fallout` will tag it with a special
 `expires_after` tag. When running the backup, `fallout` will search for
