@@ -50,13 +50,21 @@ end
 case cmd
 when 'backup'
   if(opts[:volume].nil? || opts[:keep].nil?)
-    puts '-v and -k are required for backup' 
+    puts '-v and -k are required for backup'
   else
-    Fallout::Backup.new(opts).run
+    f = Fallout::Backup.new(opts)
+    expired_snapshots = f.delete_expired_snapshots
+    if expired_snapshots.any?
+      puts "Deleted snapshots #{expired_snapshots.map(&:id).join(', ')}"
+    else
+      puts "No expired snapshots found"
+    end
+    new_snapshot, expires_after = f.run
+    puts "Created new snapshot #{new_snapshot.id}, expires after #{expires_after}"
   end
 when 'restore'
   if(opts[:instance].nil? || opts[:volume].nil?)
-    puts '-i and -v are required for restore' 
+    puts '-i and -v are required for restore'
   else
     Fallout::Restore.new(opts).run
   end
