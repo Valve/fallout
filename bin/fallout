@@ -66,6 +66,27 @@ when 'restore'
   if(opts[:instance].nil? || opts[:volume].nil?)
     puts '-i and -v are required for restore'
   else
-    Fallout::Restore.new(opts).run
+    begin
+      r = Fallout::Restore.new(opts)
+      snapshot = r.get_latest_snapshot_for_volume(r.get_volume)
+      puts "Initiating omega protocol, retina scan required."
+      sleep 3
+      puts "Ok, let's do it without retina, shutting down your instance."
+      instance = r.shutdown_instance
+      puts "Shut down instance successfully: #{instance.id}, status: #{instance.status}"
+      attachment = r.detach_volume(instance)
+      puts "Detached volume #{attachment.volume.id} from instance #{instance.id} successfully"
+      new_volume = r.create_volume(snapshot)
+      puts "Created new volume from the latest snapshot (#{new_volume.id})"
+      r.attach_volume(new_volume, instance)
+      puts "Attached new volume to instance"
+      instance = r.start_instance(instance)
+      puts "Successfully restored and started the instance with the new volume"
+      puts "Instance public hostname: #{instance.dns_name}"
+      puts "You man want to delete the old, detached volume #{attachment.volume.id} and old volume snapshots"
+      puts "IMPORTANT: You must update your backup command to use new volume_id: #{new_volume.id}"
+    rescue Exception => e
+      puts e.message
+    end
   end
 end

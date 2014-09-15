@@ -44,7 +44,63 @@ running every day, it will keep N most fresh snapshots automatically.
 
 ### restore
 
-Work in progress
+Restoring is a one-liner too.
+
+Syntax:
+
+`fallout restore -i <instance_id> -v <volume_id>`
+
+Example:
+
+```
+$ fallout restore -i i-f7850bda -v vol-72436837
+
+Shutting down your instance.
+Shut down instance successfully: i-f7850bda, status: stopped
+Detached volume vol-72436837 from instance i-f7850bda successfully
+Created new volume from the latest snapshot (vol-3942697c)
+Attached new volume to instance
+Successfully restored and started the instance with the new volume
+Instance public hostname: ec2-54-165-20-157.compute-1.amazonaws.com
+You man want to delete the old, detached volume vol-72436837 and old volume snapshots
+IMPORTANT: You must update your backup command to use new volume_id: vol-3942697c
+```
+
+#### How does restoring work?
+
+Restoring with fallout requires you to have at least 1 snapshot for the
+volume. The process will shutdown the instance, detach the root volume,
+create new volume from the latest snapshot and attach it as `/dev/sda1`
+device. Then the process will boot the instance with the new volume and
+display its public hostname.
+
+##### IMPORTANT:
+
+Currently the volume will be attached as `/dev/sda1` device and created
+in `us-east-1a` zone.
+If you need this stuff to be configurable, let me know, I'll implement
+it.
+
+#### General considerations:
+
+I created this gem purely for my own purposes, we only have a handful of
+EC2 instances and the gem is working fine for us.
+
+I run `fallout backup` daily with cron.
+
+Contributions, tips/advices and pull requests are welcome.
+
+### Licence
+
+This code is MIT licenced:
+
+Copyright (c) 2014 Valentin Vasilyev
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## Contributing
 
