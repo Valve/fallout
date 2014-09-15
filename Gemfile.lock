@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    fallout (0.0.1)
+    fallout (0.0.2)
       aws-sdk
       trollop
 
