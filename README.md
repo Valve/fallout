@@ -62,7 +62,7 @@ Created new volume from the latest snapshot (vol-3942697c)
 Attached new volume to instance
 Successfully restored and started the instance with the new volume
 Instance public hostname: ec2-54-165-20-157.compute-1.amazonaws.com
-You man want to delete the old, detached volume vol-72436837 and old volume snapshots
+You may want to delete the old, detached volume vol-72436837 and old volume snapshots
 IMPORTANT: You must update your backup command to use new volume_id: vol-3942697c
 ```
 

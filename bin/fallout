@@ -83,7 +83,7 @@ when 'restore'
       instance = r.start_instance(instance)
       puts "Successfully restored and started the instance with the new volume"
       puts "Instance public hostname: #{instance.dns_name}"
-      puts "You man want to delete the old, detached volume #{attachment.volume.id} and old volume snapshots"
+      puts "You may want to delete the old, detached volume #{attachment.volume.id} and old volume snapshots"
       puts "IMPORTANT: You must update your backup command to use new volume_id: #{new_volume.id}"
     rescue Exception => e
       puts e.message
