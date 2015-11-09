@@ -16,9 +16,9 @@ This gem installs `fallout` executable. Don't forget to run `rbenv` rehash, if y
 
 ### Required environment variables:
 
-`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and 'AWS_REGION'
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_REGION`
 
-`AWS_REGION` is required to be able to connect with AWS SDK.
+`AWS_REGION` is required to be able to connect with AWS SDK. Specify the region of the EC2 instance you want to back up/restore.
 
 #### Optional environment variables - used in restore command only:
 
