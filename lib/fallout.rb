@@ -1,3 +1,6 @@
+require 'aws-sdk'
+require 'fallout/volume_utils'
+require 'fallout/instance_utils'
 require 'fallout/version'
 require 'fallout/backup'
 require 'fallout/restore'

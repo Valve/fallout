@@ -1,76 +1,70 @@
 module Fallout
   class Restore
+    include VolumeUtils, InstanceUtils
+    attr_reader :volume
     def initialize(options)
       @instance_id = options[:instance]
+      @instance = verify_instance_or_raise(Aws::EC2::Instance.new(@instance_id))
       @volume_id = options[:volume]
-      @ec2 = AWS::EC2.new
-      @ec2_client = AWS::EC2::Client.new
-    end
-
-    def get_volume
-      @ec2.volumes[@volume_id]
-    end
-
-    def shutdown_instance
-      instance = @ec2.instances[@instance_id]
-      raise "Instance does not exist: #{@instance_id}" if instance.nil? || !instance.exists?
-      instance.stop
-      while instance.status != :stopped
-        sleep 1
+      @volume = verify_volume_or_raise(Aws::EC2::Volume.new(@volume_id))
+      @ec2 = Aws::EC2::Client.new
+      if ENV['AWS_REGION']
+        @availability_zone = ENV['AWS_AVAILABILITY_ZONE'] || "#{ENV['AWS_REGION']}a"
+      else
+        raise 'AWS_REGION is a required env variable. Please see the list of available regions at: http://goo.gl/0b2VOE'
       end
-      instance
+      @attach_as_device = ENV['AWS_ATTACH_VOLUME_AS_DEVICE'] || '/dev/sda1'
     end
 
-    def start_instance(instance)
-      instance.start
-      while instance.status != :running
-        sleep 1
-      end
-      instance
+    def stop_instance
+      @instance.stop
+      @instance.wait_until_stopped
+      @instance
     end
 
-    def detach_volume(instance, device = '/dev/sda1')
-      volume = @ec2.volumes[@volume_id]
-      raise "Volume does not exist: #{volume_id}" if volume.nil? || !volume.exists?
-      attachment = volume.detach_from(instance, device)
-      while volume.status != :available
-        sleep 1
-      end
-      attachment
+    def start_instance
+      @instance.start
+      @instance.wait_until_running
+      @instance
     end
 
-    def attach_volume(volume, instance, device = '/dev/sda1')
-      volume.attach_to(instance, device)
-      while volume.status != :in_use
-        sleep 1
-      end
+    def detach_volume
+      volume_attachment = volume.detach_from_instance(instance_id: @instance_id, device: @attach_as_device)
+      @ec2.wait_until(:volume_available, volume_ids: [volume.id])
+      volume_attachment
+    end
+
+    def attach_volume(volume)
+      attach_options = {instance_id: @instance_id, device: @attach_as_device}
+      volume.attach_to_instance(attach_options)
+      @ec2.wait_until(:volume_in_use, volume_ids: [volume.id])
       volume
     end
 
     def delete_volume(volume)
       volume.delete
-      while volume.status != :deleted
-        sleep 1
-      end
+      @ec2.wait_until(:volume_deleted, volume_ids: [volume.id])
       volume
     end
 
-    def get_latest_snapshot_for_volume(volume)
-      snapshots = @ec2.snapshots.filter('volume-id', @volume_id)
-      raise "No snapshots for volume #{volume.id} found, aborting restore process.\n
-      Hint: have you created a snapshot for this volume at least once?" unless snapshots.any?
-      snapshots.max_by{|ss| Date.parse(ss.tags.to_h[EXPIRES_AFTER_KEY]) rescue Date.new}
+    def get_latest_snapshot
+      snapshots = @volume.snapshots
+      unless snapshots.any?
+        raise "No snapshots for volume #{@volume.id} found, aborting restore process.\nHint: have you created a snapshot for this volume at least once?"
+      end
+      snapshots.max_by{|ss|
+        tags_hash = Hash[ss.tags.map{|t| [t.key, t.value]}]
+        Date.parse(tags_hash[EXPIRES_ON_KEY]) rescue Date.new
+      }
     end
 
-    def create_volume(snapshot, availability_zone = 'us-east-1a', volume_type: 'gp2')
-      resp = @ec2_client.create_volume(
+    def create_volume(snapshot, volume_type: 'gp2')
+      resp = @ec2.create_volume(
         snapshot_id: snapshot.id,
-        availability_zone: availability_zone,
+        availability_zone: @availability_zone,
         volume_type: volume_type)
-      volume = @ec2.volumes[resp[:volume_id]]
-      while volume.status != :available
-        sleep 1
-      end
+      volume = Aws::EC2::Volume.new(resp.volume_id)
+      @ec2.wait_until(:volume_available, volume_ids: [resp.volume_id])
       volume
     end
   end

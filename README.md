@@ -1,7 +1,10 @@
 # Fallout
 
 Really easy Amazon EC2 backup/restore solution.
+Works by making volume snapshots periodically (with expiration)
+and taking the last snapshot when restoring.
 
+Fallout is really easy, I suggest you try it.
 
 ## Installation
 
@@ -9,10 +12,21 @@ Really easy Amazon EC2 backup/restore solution.
 
 ## Usage
 
-This gem installs `fallout` executable. Don't forget to run `rbenv`
-rehash, if you're on rbenv.
-You must have `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
-environment variables set to authenticate with EC2.
+This gem installs `fallout` executable. Don't forget to run `rbenv` rehash, if you're on rbenv.
+
+### Required environment variables:
+
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and 'AWS_REGION'
+
+`AWS_REGION` is required to be able to connect with AWS SDK.
+
+#### Optional environment variables - used in restore command only:
+
+`AWS_AVAILABILITY_ZONE` - availability zone where to create the new volume for your instance in.
+
+If you don't set it, it will default to your AWS_REGION + 'a', e.g. `eu-central-1a`.
+
+`AWS_ATTACH_VOLUME_AS_DEVICE` - will use `/dev/sda1` as default.
 
 Fallout supports 2 commands:
 
@@ -38,7 +52,7 @@ specified volume._
 #### How does expiration work?
 
 When creating a snapshot, `fallout` will tag it with a special
-`expires_after` tag. When running the backup, `fallout` will search for
+`expires_on` tag. When running the backup, `fallout` will search for
 any expired snapshots and remove them. This way you can have `fallout`
 running every day, it will keep N most fresh snapshots automatically.
 
@@ -71,15 +85,9 @@ IMPORTANT: You must update your backup command to use new volume_id: vol-3942697
 Restoring with fallout requires you to have at least 1 snapshot for the
 volume. The process will shutdown the instance, detach the root volume,
 create new volume from the latest snapshot and attach it as `/dev/sda1`
-device. Then the process will boot the instance with the new volume and
+device(can be overridden with AWS_ATTACH_VOLUME_AS_DEVICE env var).
+Then the process will boot the instance with the new volume and
 display its public hostname.
-
-##### IMPORTANT:
-
-Currently the volume will be attached as `/dev/sda1` device and created
-in `us-east-1a` zone.
-If you need this stuff to be configurable, let me know, I'll implement
-it.
 
 #### General considerations:
 
@@ -90,11 +98,11 @@ I run `fallout backup` daily with cron.
 
 Contributions, tips/advices and pull requests are welcome.
 
-### Licence
+### License
 
-This code is MIT licenced:
+This code is MIT licensed:
 
-Copyright (c) 2014 Valentin Vasilyev
+Copyright (c) 2015 Valentin Vasilyev
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

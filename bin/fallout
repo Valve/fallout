@@ -52,15 +52,19 @@ when 'backup'
   if(opts[:volume].nil? || opts[:keep].nil?)
     puts '-v and -k are required for backup'
   else
-    f = Fallout::Backup.new(opts)
-    expired_snapshots = f.delete_expired_snapshots
-    if expired_snapshots.any?
-      puts "Deleted snapshots #{expired_snapshots.map(&:id).join(', ')}"
-    else
-      puts "No expired snapshots found"
+    begin
+      f = Fallout::Backup.new(opts)
+      expired_snapshots = f.delete_expired_snapshots
+      if expired_snapshots.any?
+        puts "Deleted snapshots #{expired_snapshots.map(&:id).join(', ')}"
+      else
+        puts "No expired snapshots found"
+      end
+      new_snapshot, expires_on = f.run
+      puts "Created new snapshot #{new_snapshot.id}, expires on #{expires_on}"
+    rescue Exception => e
+      puts e.message
     end
-    new_snapshot, expires_after = f.run
-    puts "Created new snapshot #{new_snapshot.id}, expires after #{expires_after}"
   end
 when 'restore'
   if(opts[:instance].nil? || opts[:volume].nil?)
@@ -68,23 +72,26 @@ when 'restore'
   else
     begin
       r = Fallout::Restore.new(opts)
-      snapshot = r.get_latest_snapshot_for_volume(r.get_volume)
+      snapshot = r.get_latest_snapshot
+      unless snapshot
+        raise "You do not have any snapshots to restore your instance from.\n Did you run fallout backup at least once?"
+      end
       puts "Initiating omega protocol, retina scan required."
       sleep 3
-      puts "Ok, let's do it without retina, shutting down your instance."
-      instance = r.shutdown_instance
-      puts "Shut down instance successfully: #{instance.id}, status: #{instance.status}"
-      attachment = r.detach_volume(instance)
-      puts "Detached volume #{attachment.volume.id} from instance #{instance.id} successfully"
+      puts "Ok, let's do it without retina, stopping your instance."
+      instance = r.stop_instance
+      puts "Stopped instance successfully: #{instance.id}, status: #{instance.state.name}"
+      volume_attachment = r.detach_volume
+      puts "Detached volume #{volume_attachment.volume_id} from instance #{volume_attachment.instance_id} successfully"
       new_volume = r.create_volume(snapshot)
       puts "Created new volume from the latest snapshot (#{new_volume.id})"
-      r.attach_volume(new_volume, instance)
+      r.attach_volume(new_volume)
       puts "Attached new volume to instance"
-      instance = r.start_instance(instance)
+      instance = r.start_instance
       puts "Successfully restored and started the instance with the new volume"
-      puts "Instance public hostname: #{instance.dns_name}"
-      puts "You may want to delete the old, detached volume #{attachment.volume.id} and old volume snapshots"
-      puts "IMPORTANT: You must update your backup command to use new volume_id: #{new_volume.id}"
+      puts "Instance public hostname: #{Aws::EC2::Instance.new(instance.id).public_dns_name}"
+      puts "You may want to delete the old, detached volume #{volume_attachment.volume_id} and old volume snapshots"
+      puts "IMPORTANT: You must update your backup command to use the new volume_id: #{new_volume.id}"
     rescue Exception => e
       puts e.message
     end

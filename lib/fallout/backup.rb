@@ -1,20 +1,23 @@
-require 'aws'
 module Fallout
   class Backup
-    EXPIRES_AFTER_KEY = 'expires_after'.freeze
+    EXPIRES_ON_KEY = 'expires_on'.freeze
+
+    include VolumeUtils
+
     def initialize(options)
       @volume_id = options[:volume]
       @keep = options[:keep].to_i
-      @expires_after = Date.today + @keep
-      @ec2 = AWS::EC2.new
+      @expires_on = Date.today + @keep
+      @volume = verify_volume_or_raise(Aws::EC2::Volume.new(@volume_id))
     end
 
     def delete_expired_snapshots
-      snapshots = @ec2.snapshots.filter('volume-id', @volume_id)
+      snapshots = @volume.snapshots
       snapshots = snapshots.map do |ss|
         begin
-          da = Date.parse(ss.tags.to_h[EXPIRES_AFTER_KEY])
-          if da < Date.today
+          tags_hash = Hash[ss.tags.map{|t| [t.key, t.value]}]
+          expires_on = Date.parse(tags_hash[EXPIRES_ON_KEY])
+          if expires_on < Date.today
             ss.delete
             ss
           end
@@ -26,12 +29,10 @@ module Fallout
     end
 
     def run
-      @volume = @ec2.volumes[@volume_id]
-      raise "Volume does not exist: #{@volume_id}" if @volume.nil? || !@volume.exists?
-      desc = "Snapshot for volume #{@volume_id}, will be deleted after #{@expires_after}"
-      snapshot = @volume.create_snapshot(desc)
-      snapshot.add_tag(EXPIRES_AFTER_KEY, value: @expires_after.to_s)
-      [snapshot, @expires_after]
+      description = "Snapshot for volume #{@volume_id}, will be deleted on #{@expires_on}"
+      snapshot = @volume.create_snapshot(description: description)
+      snapshot.create_tags(tags: [{key: EXPIRES_ON_KEY, value: @expires_on.to_s}])
+      [snapshot, @expires_on]
     end
   end
 end
