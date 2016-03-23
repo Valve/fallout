@@ -1,3 +1,5 @@
+[![codebeat badge](https://codebeat.co/badges/6908ee87-bb8a-4af2-aab5-816f5f08bdf7)](https://codebeat.co/projects/github-com-valve-fallout)
+
 # Fallout
 
 Really easy Amazon EC2 backup/restore solution.
